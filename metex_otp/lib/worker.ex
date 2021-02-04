@@ -4,27 +4,29 @@ defmodule Metex.Worker do
 
   ## CLIENT API
 
+  @name Metex
+
   def start_link(opts \\ []) do
     ## __MODULE__ = name of the module 'init' is implemented
     ## :ok = arguments to be passed to 'init' function
     ## opts = list of options to be passed to GenServer.start_link
-    GenServer.start(__MODULE__, :ok, opts)
+    GenServer.start(__MODULE__, :ok, opts ++ [name: Metex])
   end
 
-  def get_temperature(pid, location) do
-    GenServer.call(pid, {:location, location})
+  def get_temperature(location) do
+    GenServer.call(@name, {:location, location})
   end
 
-  def get_stats(pid) do
-    GenServer.call(pid, :get_stats)
+  def get_stats do
+    GenServer.call(@name, :get_stats)
   end
 
-  def reset_stats(pid) do
-    GenServer.cast(pid, :reset_stats)
+  def reset_stats do
+    GenServer.cast(@name, :reset_stats)
   end
 
-  def stop(pid) do
-    GenServer.cast(pid, :stop)
+  def stop do
+    GenServer.cast(@name, :stop)
   end
 
   ## SERVER API
