@@ -7,7 +7,6 @@ defmodule Metex.Worker do
       _ ->
         IO.puts "I can't process this message"
     end
-    loop()
   end
 
   defp temperature_of(location) do
