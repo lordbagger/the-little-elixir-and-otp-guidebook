@@ -2,7 +2,7 @@ defmodule PoolyTest do
   use ExUnit.Case
   doctest Pooly
 
-  test "greets the world" do
-    assert Pooly.hello() == :world
+  test "starts with 5 workers in the pool" do
+    assert Pooly.status() == {5, 0}
   end
 end
