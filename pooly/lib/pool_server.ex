@@ -64,7 +64,7 @@ defmodule Pooly.PoolServer do
     case workers do
       [worker | rest] ->
         ref = Process.monitor(from_pid)
-        true = :ets.insert(monitors, {workers, ref})
+        true = :ets.insert(monitors, {worker, ref})
         {:reply, worker, %{state | workers: rest}}
 
       [] ->
@@ -94,8 +94,6 @@ defmodule Pooly.PoolServer do
   end
 
   def handle_info({:DOWN, ref, _, _, _}, state = %{monitors: monitors, workers: workers}) do
-    IEx.Pry
-
     case :ets.match(monitors, {:"$1", ref}) do
       [[pid]] ->
         true = :ets.delete(monitors, pid)
@@ -108,11 +106,9 @@ defmodule Pooly.PoolServer do
   end
 
   def handle_info(
-        {:EXIT, pid, _reason},
+        {:EXIT, pid, reason},
         %{pool_sup: pool_sup, monitors: monitors, workers: workers} = state
       ) do
-    IEx.Pry
-
     case :ets.lookup(monitors, pid) do
       [{pid, ref}] ->
         true = Process.demonitor(ref)
