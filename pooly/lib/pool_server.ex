@@ -47,13 +47,13 @@ defmodule Pooly.PoolServer do
     init(rest, %{state | name: name})
   end
 
-  def init([_ | rest], state) do
-    init(rest, state)
-  end
-
   def init([], state) do
     send(self(), :start_worker_supervisor)
     {:ok, state}
+  end
+
+  def init([_ | rest], state) do
+    init(rest, state)
   end
 
   def handle_call(:status, _from, %{workers: workers, monitors: monitors} = state) do
@@ -106,14 +106,14 @@ defmodule Pooly.PoolServer do
   end
 
   def handle_info(
-        {:EXIT, pid, reason},
-        %{pool_sup: pool_sup, monitors: monitors, workers: workers} = state
+        {:EXIT, pid, _reason},
+        %{worker_sup: worker_sup, monitors: monitors, workers: workers} = state
       ) do
     case :ets.lookup(monitors, pid) do
       [{pid, ref}] ->
         true = Process.demonitor(ref)
         true = :ets.delete(monitors, pid)
-        new_state = %{state | workers: [new_worker(pool_sup) | workers]}
+        new_state = %{state | workers: [new_worker(worker_sup) | workers]}
         {:noreply, new_state}
 
       _ ->
@@ -145,8 +145,9 @@ defmodule Pooly.PoolServer do
     prepopulate(size - 1, worker_sup, [new_worker(worker_sup) | workers])
   end
 
-  defp new_worker(pool_sup) do
-    {:ok, worker} = Supervisor.start_child(pool_sup, [[]])
+  defp new_worker(worker_sup) do
+    {:ok, worker} = Supervisor.start_child(worker_sup, [[]])
+    Process.link(worker)
     worker
   end
 
