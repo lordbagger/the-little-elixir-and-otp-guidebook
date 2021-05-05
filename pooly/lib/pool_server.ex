@@ -12,15 +12,16 @@ defmodule Pooly.PoolServer do
               monitors: nil,
               name: nil,
               max_overflow: nil,
-              overflow: nil
+              overflow: nil,
+              waiting: nil
   end
 
   def start_link(pool_sup, pool_config) do
     GenServer.start_link(__MODULE__, [pool_sup, pool_config], name: name(pool_config[:name]))
   end
 
-  def checkout(pool_name) do
-    GenServer.call(name(pool_name), :checkout)
+  def checkout(pool_name, block, timeout) do
+    GenServer.call(name(pool_name), {:checkout, block}, timeout)
   end
 
   def checkin(pool_name, worker_pid) do
@@ -34,7 +35,9 @@ defmodule Pooly.PoolServer do
   def init([pool_sup, pool_config]) do
     Process.flag(:trap_exit, true)
     monitors = :ets.new(:monitors, [:private])
-    init(pool_config, %State{pool_sup: pool_sup, monitors: monitors})
+    waiting = :queue.new()
+    state = %State{pool_sup: pool_sup, monitors: monitors, waiting: waiting}
+    init(pool_config, state)
   end
 
   def init([{:mfa, mfa} | rest], state) do
@@ -68,13 +71,14 @@ defmodule Pooly.PoolServer do
 
   def handle_call(
         {:checkout, block},
-        {from_pid, _ref},
+        {from_pid, _ref} = from,
         %{
           worker_sup: worker_sup,
           workers: workers,
           monitors: monitors,
           max_overflow: max_overflow,
-          overflow: overflow
+          overflow: overflow,
+          waiting: waiting
         } = state
       ) do
     case workers do
@@ -89,11 +93,13 @@ defmodule Pooly.PoolServer do
         true = :ets.insert(monitors, {worker, ref})
         {:reply, worker, %{state | overflow: overflow + 1}}
 
-      [] ->
-        {:reply, :full, state}
+      [] when block == true ->
+        ref = Process.monitor(from_pid)
+        waiting = :queue.in({from, ref}, waiting)
+        {:noreply, %{state | waiting: waiting}, :infinity}
 
       [] ->
-        {:reply, :noproc, state}
+        {:reply, :full, state}
     end
   end
 
