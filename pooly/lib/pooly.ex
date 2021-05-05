@@ -6,17 +6,20 @@ defmodule Pooly do
       [
         name: "Pool1",
         mfa: {Pooly.SampleWorker, :start_link, []},
-        size: 2
+        size: 2,
+        max_overflow: 3
       ],
       [
         name: "Pool2",
         mfa: {Pooly.SampleWorker, :start_link, []},
-        size: 3
+        size: 3,
+        max_overflow: 0
       ],
       [
         name: "Pool3",
         mfa: {Pooly.SampleWorker, :start_link, []},
-        size: 4
+        size: 4,
+        max_overflow: 0
       ]
     ]
 
